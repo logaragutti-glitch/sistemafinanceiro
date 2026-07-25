@@ -7,3 +7,4 @@ extratos/*.ofx
 extratos/*.xlsx
 extratos/.processados.json
 .streamlit/secrets.toml
+painel/.streamlit/secrets.toml

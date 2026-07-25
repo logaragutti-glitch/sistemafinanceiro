@@ -124,6 +124,26 @@ ou em outro formato — mas não conte com isso.
 - VPS barata (R$20-30/mês) ou Raspberry Pi na empresa
 - Alternativa serverless: GitHub Actions com cron (grátis) — um workflow por cenário
 
+## Painel web (leitura, grátis)
+`painel/app.py` é um painel Streamlit (só leitura, não edita nada) que lê
+direto da mesma planilha Google Sheets: receita/despesas do mês por empresa,
+DRE, Real vs Orçado, comissões da semana, contratos em atraso.
+
+Rodar localmente:
+```
+streamlit run painel/app.py
+```
+(usa o mesmo `credentials.json`/`.env` da raiz do projeto)
+
+Hospedar de graça (Streamlit Community Cloud — [share.streamlit.io](https://share.streamlit.io)):
+1. Suba este repositório pro GitHub (de preferência **privado** — são dados financeiros)
+2. Em share.streamlit.io: **New app** → escolha o repo → **Main file path**: `painel/app.py`
+3. Em **Advanced settings → Secrets**, cole o conteúdo de `.streamlit/secrets.toml`
+   (não vai pro Git — contém a chave da service account; gere um a partir do
+   seu `credentials.json` + `SPREADSHEET_ID` se precisar recriar)
+4. Deploy — fica disponível num link `SEU_APP.streamlit.app`, acessível de
+   qualquer lugar
+
 ## Claude Code
 Abra esta pasta no Claude Code e peça, por exemplo:
 "implemente o TODO do matching por chave Pix no scenario_1" — os TODOs marcam os
