@@ -77,12 +77,10 @@ UNIDADE_EMPRESAS = {
 
 VENDEDORES = {
     # nome: {telefone, e-mail, percentual, empresa} — comissão avisada por
-    # WhatsApp E e-mail. TODO: e-mails abaixo são placeholder, confirmar os reais.
-    "João":  {"fone": "5522988880001", "email": "joao@example.com", "pct": 0.10, "empresa": "casa_arvore"},
-    "Maria": {"fone": "5522988880002", "email": "maria@example.com", "pct": 0.10, "empresa": "casa_arvore"},
-    "Pedro": {"fone": "5522988880003", "email": "pedro@example.com", "pct": 0.10, "empresa": "casa_arvore"},
-    "Ana":   {"fone": "5522988880004", "email": "ana@example.com", "pct": 0.06, "empresa": "casarao"},
-    "Bruno": {"fone": "5522988880005", "email": "bruno@example.com", "pct": 0.06, "empresa": "casarao"},
+    # WhatsApp E e-mail. Lista real, montada aos poucos conforme confirmado
+    # pelo gestor (TODO: telefone da Cris ainda não confirmado).
+    "Cris": {"fone": "", "email": "comerciargrupocasadaarvore@gmail.com",
+             "pct": 0.01, "empresa": "casa_arvore"},
 }
 
 # Regra de comissão: contrato ASSINADO (decisão do gestor) com estorno se cancelar

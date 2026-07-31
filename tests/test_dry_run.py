@@ -114,6 +114,18 @@ def _analisar_stub(prompt, max_tokens=800):
     return "[stub] análise não chamada offline."
 claude_ai.analisar = _analisar_stub
 
+# Vendedores de teste — independentes da lista real em config.VENDEDORES
+# (que vai sendo preenchida aos poucos com gente de verdade conforme o
+# gestor confirma). O teste não deve quebrar toda vez que alguém real for
+# adicionado/removido da config — por isso usa seu próprio elenco fake.
+config.VENDEDORES = {
+    "João":  {"fone": "5522988880001", "email": "joao@example.com", "pct": 0.10, "empresa": "casa_arvore"},
+    "Maria": {"fone": "5522988880002", "email": "maria@example.com", "pct": 0.10, "empresa": "casa_arvore"},
+    "Pedro": {"fone": "5522988880003", "email": "pedro@example.com", "pct": 0.10, "empresa": "casa_arvore"},
+    "Ana":   {"fone": "5522988880004", "email": "ana@example.com", "pct": 0.06, "empresa": "casarao"},
+    "Bruno": {"fone": "5522988880005", "email": "bruno@example.com", "pct": 0.06, "empresa": "casarao"},
+}
+
 # ---------------------------------------------------------------------------
 # 3) DADOS SIMULADOS: contratos abertos + transações bancárias fictícias
 # ---------------------------------------------------------------------------
