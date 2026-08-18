@@ -122,7 +122,7 @@ ou em outro formato — mas não conte com isso.
 
 ## Operação assistida e entrada em produção
 
-A aba `Contas_a_Receber` é a fonte de verdade para o matching bancário. Antes de executar o sistema com dados reais, copie `templates/contas_a_receber.csv`, substitua os exemplos pelos contratos e valide o arquivo sem escrever na planilha:
+A aba `Contas_a_Receber` é a fonte de verdade para o matching bancário. Antes de executar o sistema com dados reais, copie `templates/contas_a_receber.csv`, preencha as linhas com contratos reais e valide o arquivo sem escrever na planilha. O template contém somente os cabeçalhos para impedir a entrada acidental de dados fictícios:
 
 ```bash
 python -m scripts.importar_contas_receber --csv contratos.csv --dry-run
