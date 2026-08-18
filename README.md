@@ -120,9 +120,36 @@ ou em outro formato — mas não conte com isso.
 6. Rode manualmente cada cenário: `python -m src.scenario_1_ingest`
 7. Produção: `python main.py` (mantém agendador rodando) ou use cron/systemd
 
+## Operação assistida e entrada em produção
+
+A aba `Contas_a_Receber` é a fonte de verdade para o matching bancário. Antes de executar o sistema com dados reais, copie `templates/contas_a_receber.csv`, substitua os exemplos pelos contratos e valide o arquivo sem escrever na planilha:
+
+```bash
+python -m scripts.importar_contas_receber --csv contratos.csv --dry-run
+```
+
+Depois de revisar o resultado, importe as parcelas. Linhas já existentes, identificadas pela combinação `ID Contrato` + `Parcela`, são ignoradas para evitar duplicidade:
+
+```bash
+python -m scripts.importar_contas_receber --csv contratos.csv
+```
+
+O diagnóstico de prontidão não expõe segredos e separa erros críticos de avisos operacionais:
+
+```bash
+python -m scripts.verificar_producao
+python -m scripts.verificar_producao --online
+```
+
+Para testar um cenário individual sem aguardar o horário agendado, use:
+
+```bash
+python -m scripts.run_once --cenario 1
+```
+
 ## Deploy sugerido
-- VPS barata (R$20-30/mês) ou Raspberry Pi na empresa
-- Alternativa serverless: GitHub Actions com cron (grátis) — um workflow por cenário
+- VPS barata (R$20-30/mês) ou Raspberry Pi na empresa. O arquivo `deploy/systemd/sistema-financeiro.service` e seu README contêm a instalação reproduzível.
+- Alternativa serverless: GitHub Actions com cron (grátis) — um workflow por cenário, desde que a rotina de extratos seja resolvida e os segredos sejam configurados com segurança.
 
 ## Painel web (leitura, grátis)
 `painel/app.py` é um painel Streamlit (só leitura, não edita nada) que lê

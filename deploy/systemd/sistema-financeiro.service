@@ -1,0 +1,20 @@
+[Unit]
+Description=Sistema Financeiro Casa da Árvore + Casarão
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=%h/sistema-financeiro
+EnvironmentFile=%h/sistema-financeiro/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 -u main.py
+Restart=on-failure
+RestartSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+ReadWritePaths=%h/sistema-financeiro/logs %h/sistema-financeiro/extratos
+
+[Install]
+WantedBy=multi-user.target
