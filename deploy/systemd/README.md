@@ -15,11 +15,7 @@ cp .env.example .env
 # coloque credentials.json na raiz e preencha .env
 ```
 
-O serviço fornecido usa `/usr/bin/python3` por padrão. Em uma instalação com ambiente virtual, ajuste `ExecStart` para:
-
-```ini
-ExecStart=%h/sistema-financeiro/.venv/bin/python -u main.py
-```
+O serviço já usa o ambiente virtual criado no procedimento acima, garantindo que as dependências validadas sejam as mesmas utilizadas pelo agendador.
 
 Depois instale e ative o serviço:
 

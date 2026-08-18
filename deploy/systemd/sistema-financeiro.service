@@ -10,7 +10,7 @@ WorkingDirectory=%h/sistema-financeiro
 EnvironmentFile=%h/sistema-financeiro/.env
 Environment=PYTHONUNBUFFERED=1
 Environment=TZ=America/Sao_Paulo
-ExecStart=/usr/bin/python3 -u main.py
+ExecStart=%h/sistema-financeiro/.venv/bin/python -u main.py
 Restart=on-failure
 RestartSec=30
 NoNewPrivileges=true
