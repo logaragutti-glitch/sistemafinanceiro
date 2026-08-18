@@ -16,6 +16,31 @@ load_dotenv()
 _client = None
 
 
+def _cabecalhos_unicos(cabecalhos):
+    """Garante chaves distintas quando uma planilha contém cabeçalho repetido."""
+    usados = {}
+    resultado = []
+    for indice, cabecalho in enumerate(cabecalhos, start=1):
+        base = str(cabecalho or "").strip() or f"_coluna_{indice}"
+        ocorrencia = usados.get(base, 0) + 1
+        usados[base] = ocorrencia
+        resultado.append(base if ocorrencia == 1 else f"{base}__{ocorrencia}")
+    return resultado
+
+
+def _ler_por_valores(ws):
+    """Fallback para a limitação de get_all_records com cabeçalhos repetidos."""
+    valores = ws.get_all_values()
+    if not valores:
+        return []
+    cabecalhos = _cabecalhos_unicos(valores[0])
+    registros = []
+    for linha in valores[1:]:
+        preenchida = list(linha) + [""] * max(0, len(cabecalhos) - len(linha))
+        registros.append(dict(zip(cabecalhos, preenchida)))
+    return registros
+
+
 def planilha():
     global _client
     if _client is None:
@@ -28,8 +53,18 @@ def planilha():
 
 @com_retry()
 def ler(aba):
-    """Retorna lista de dicts (linha 1 = headers)."""
-    return planilha().worksheet(aba).get_all_records()
+    """Retorna lista de dicts (linha 1 = headers).
+
+    O gspread rejeita cabeçalhos duplicados em ``get_all_records``. Como o
+    sistema já possui planilhas reais em produção, fazemos fallback para os
+    valores brutos e preservamos a primeira ocorrência com o nome original;
+    ocorrências seguintes recebem o sufixo ``__2``, ``__3`` etc.
+    """
+    ws = planilha().worksheet(aba)
+    try:
+        return ws.get_all_records()
+    except ValueError:
+        return _ler_por_valores(ws)
 
 
 @com_retry()

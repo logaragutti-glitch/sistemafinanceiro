@@ -57,13 +57,24 @@ def _cliente():
     return gspread.authorize(creds).open_by_key(spreadsheet_id)
 
 
+FALHAS_LEITURA = {}
+
+
 @st.cache_data(ttl=300)
 def ler(aba):
-    """Lê uma aba como DataFrame. Aba vazia/inexistente -> DataFrame vazio,
-    nunca quebra o painel."""
+    """Lê uma aba como DataFrame sem derrubar o painel.
+
+    Aba ausente, credencial inválida, planilha indisponível ou cabeçalho
+    inconsistente são tratados como uma leitura vazia e registrados para o
+    aviso operacional exibido na tela. O painel continua útil para as abas
+    que conseguirem ser lidas.
+    """
     try:
         registros = _cliente().worksheet(aba).get_all_records()
     except gspread.exceptions.WorksheetNotFound:
+        return pd.DataFrame()
+    except Exception as exc:  # noqa: BLE001 — a interface não deve cair por uma aba
+        FALHAS_LEITURA[aba] = type(exc).__name__
         return pd.DataFrame()
     return pd.DataFrame(registros)
 
@@ -79,6 +90,7 @@ st.title("📊 Financeiro — Casa da Árvore + Casarão")
 st.caption(f"Dados de {date.today().strftime('%d/%m/%Y')} · atualiza sozinho a cada 5 min")
 if st.button("🔄 Atualizar agora"):
     st.cache_data.clear()
+    FALHAS_LEITURA.clear()
     st.rerun()
 
 hoje = date.today()
@@ -88,6 +100,14 @@ seg_semana = hoje - timedelta(days=hoje.weekday())
 cr = ler("Contas_a_Receber")
 dre = ler("DRE_Automatico")
 real_orcado = ler("RealVsOrcado")
+
+if FALHAS_LEITURA:
+    abas = ", ".join(sorted(FALHAS_LEITURA))
+    st.warning(
+        "Não foi possível ler algumas abas da planilha ("
+        f"{abas}). O painel exibirá zeros ou mensagens de ausência até que "
+        "as credenciais e os cabeçalhos sejam corrigidos."
+    )
 
 # ---------------------------------------------------------------------------
 # KPIs por empresa
