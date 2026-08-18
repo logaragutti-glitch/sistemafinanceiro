@@ -130,6 +130,10 @@ config.VENDEDORES = {
 # 3) DADOS SIMULADOS: contratos abertos + transações bancárias fictícias
 # ---------------------------------------------------------------------------
 HOJE = date.today()
+# Base pra "assinado essa semana" que funciona não importa em que dia da
+# semana o teste rodar — "HOJE - N dias" fixo quebra se rodar segunda/terça
+# (cai na semana passada). Segunda desta semana é sempre <= HOJE.
+_SEG_SEMANA_FIXTURE = HOJE - timedelta(days=HOJE.weekday())
 
 DB[config.ABA_CONTAS_RECEBER] = [
     # 1) Vai casar com transação Pix na chave da Casa (AZEVEDO_ITAU)
@@ -137,13 +141,13 @@ DB[config.ABA_CONTAS_RECEBER] = [
      "Venue": "Venue Principal", "Evento": "15 anos Sofia", "Cliente": "Ana Souza",
      "Vendedor": "Maria", "Valor Total": 2500, "Valor Parcela": 2500,
      "Vencimento": HOJE.isoformat(), "Status": "Aberto",
-     "Data Assinatura": (HOJE - timedelta(days=2)).isoformat()},
+     "Data Assinatura": _SEG_SEMANA_FIXTURE.isoformat()},
     # 2) Vai casar com transação Pix na chave do Casarão (mesma conta Azevedo)
     {"ID Contrato": "CTR-002", "Parcela": "1/2", "Empresa": "Casarão Festas",
      "Venue": "Casarão", "Evento": "Casamento Lima", "Cliente": "Carla Lima",
      "Vendedor": "Ana", "Valor Total": 8000, "Valor Parcela": 4000,
      "Vencimento": HOJE.isoformat(), "Status": "Aberto",
-     "Data Assinatura": (HOJE - timedelta(days=1)).isoformat()},
+     "Data Assinatura": _SEG_SEMANA_FIXTURE.isoformat()},
     # 3) Vai casar por conta EXCLUSIVA (Park Lagos) sem precisar de chave Pix
     {"ID Contrato": "CTR-003", "Parcela": "1/1", "Empresa": "Casa da Árvore",
      "Venue": "Park Lagos", "Evento": "Corporativo XYZ", "Cliente": "Empresa XYZ",
