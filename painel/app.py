@@ -63,6 +63,30 @@ CSS = f"""
     [data-testid="stHeader"] {{ background: rgba(247,249,251,.92); }}
     [data-testid="stSidebar"] {{ background: #ffffff; border-right: 1px solid var(--border); }}
     [data-testid="stSidebar"] hr {{ margin: 1rem 0; border-color: var(--border); }}
+    [data-testid="stSidebar"] [data-testid="stRadio"] {{ width: 100%; }}
+    [data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stRadioGroup"] {{ gap: .22rem; width: 100%; }}
+    [data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stRadioOption"] {{
+        color: var(--ink) !important; opacity: 1 !important; width: 100%;
+        border-radius: 9px; transition: background .15s ease;
+    }}
+    [data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stRadioOption"] > div {{
+        width: 100%; border-radius: 9px; padding: .14rem .28rem;
+    }}
+    [data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stRadioOption"] p,
+    [data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stRadioOption"] span,
+    [data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stRadioOption"] [data-testid="stMarkdownContainer"] {{
+        color: var(--ink) !important; opacity: 1 !important; visibility: visible !important;
+        font-size: .9rem !important; font-weight: 600 !important;
+    }}
+    [data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stRadioOption"]:has(input:checked) > div {{
+        background: #e7f1f8 !important; color: {COR_CASA} !important;
+    }}
+    [data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stRadioOption"]:has(input:checked) p,
+    [data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stRadioOption"]:has(input:checked) span,
+    [data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stRadioOption"]:has(input:checked) [data-testid="stMarkdownContainer"] {{
+        color: {COR_CASA} !important;
+    }}
+    [data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stRadioOption"]:hover > div {{ background: #f1f5f7 !important; }}
     h1, h2, h3 {{ color: var(--ink); letter-spacing: -0.02em; }}
     h1 {{ font-size: 2.15rem !important; margin: .1rem 0 .25rem !important; }}
     h2 {{ font-size: 1.28rem !important; margin-top: .2rem !important; }}
