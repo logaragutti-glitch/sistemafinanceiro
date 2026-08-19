@@ -4,6 +4,10 @@ Automação financeira completa em Python, substituindo o Make (economia de R$20
 Implementa a ARQUITETURA V2: chaves Pix por empresa, Contas_a_Receber como espinha
 dorsal, comissão sobre contrato assinado com estorno, DRE com impostos.
 
+## Manual operacional
+
+O procedimento completo de operação está em [`MANUAL_OPERACOES.md`](MANUAL_OPERACOES.md). Ele reúne preparação, central de uploads, contratos, extratos, agendamentos, conciliação, fluxo de caixa, DRE, metas, comissões, manutenção, segurança e contingência.
+
 ## Estrutura
 ```
 sistema-financeiro/
