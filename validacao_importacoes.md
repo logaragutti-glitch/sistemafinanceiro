@@ -9,3 +9,5 @@ Após a segunda abertura, o painel local carregou sem erro. O menu lateral mostr
 A área de Importações abriu com aviso explícito de que selecionar arquivo não grava nada. A aba Contratos mostra o upload CSV e as regras de validação. A aba Agendamentos mostra o upload CSV e informa que os registros entram no caixa projetado, não no realizado.
 
 Foi enviado localmente um CSV de teste para a aba Agendamentos. O painel validou 1 linha, mostrou a prévia tabular, identificou 1 linha nova e manteve o botão de importação desabilitado até a confirmação. O botão não foi acionado; nenhum dado foi gravado na planilha.
+
+Em produção, após o redeploy do commit 2312204, o painel carregou sem erro e o menu mostra `Importações`, `Agendamentos` e `Fluxo de caixa`. O Resumo continua conectado à planilha e exibe as metas reais de R$ 200.000 e R$ 100.000.
