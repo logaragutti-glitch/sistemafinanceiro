@@ -92,3 +92,9 @@ A planilha deve conter a aba `Agendamentos` com os headers criados pelo sistema.
 Depois abra **Fluxo de caixa** e confira as quatro métricas: entradas realizadas, entradas previstas, saídas previstas e saldo projetado. O cadastro não deve ser usado para simular pagamentos já feitos. Quando um compromisso for realizado e conciliado, atualize o status para `Concluído` ou `Baixado` e preencha a referência da transação, para que ele deixe de aparecer como previsto.
 
 A DRE e as comissões continuam usando somente o realizado. Não é necessário alterar os cenários 1, 3 ou 6 para cadastrar uma previsão.
+
+## 1A. Usar a Central de entrada do painel
+
+Depois de abrir o painel, entre em **Importações**. Siga a ordem apresentada na tela: **1. Contratos**, **2. Extratos bancários**, **3. Agendamentos**. A própria página mostra o status atual, permite baixar os modelos e exige pré-visualização e confirmação antes de gravar.
+
+Não envie `credentials.json`, senhas, tokens ou chaves por essa tela. Esses itens continuam configurados nos Secrets do Streamlit ou no `.env` protegido do servidor.

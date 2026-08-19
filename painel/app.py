@@ -597,10 +597,36 @@ def _ler_contratos_upload(conteudo: bytes) -> list[dict]:
 
 def pagina_importacoes(frames: dict[str, pd.DataFrame], periodo: str, empresa: str, venue: str) -> None:
     render_header(periodo, empresa, "Importações")
-    st.markdown('<div class="eyebrow">Entrada controlada de dados</div><div class="page-subtitle">Envie arquivos, confira a prévia e confirme antes de qualquer gravação.</div>', unsafe_allow_html=True)
-    st.info("O sistema não grava nada automaticamente ao selecionar um arquivo. A gravação só ocorre depois da validação e do botão de confirmação.")
+    st.markdown('<div class="eyebrow">Central de entrada</div><div class="page-subtitle">Este é o caminho único para colocar os dados financeiros no sistema.</div>', unsafe_allow_html=True)
+    st.info("Siga a ordem: 1) contratos, 2) extratos bancários, 3) compromissos futuros. Cada arquivo é validado e pré-visualizado antes da gravação.")
 
-    contratos_tab, agendamentos_tab, extratos_tab = st.tabs(["Contratos", "Agendamentos", "Extratos bancários"])
+    st.markdown('<div class="section-heading"><h2>Comece aqui</h2><span class="section-caption">Checklist da primeira configuração</span></div>', unsafe_allow_html=True)
+    status_cols = st.columns(4)
+    status_items = [
+        ("1. Contratos", len(frames["Contas a receber"]), "parcelas cadastradas", "Preencha a base de recebíveis"),
+        ("2. Metas", len(frames["Metas"]), "linhas configuradas", "Confira as metas mensais"),
+        ("3. Agendamentos", len(frames["Agendamentos"]), "compromissos futuros", "Registre entradas e saídas"),
+        ("4. Extratos", "OFX/XLSX", "seis contas", "Envie na aba ao lado"),
+    ]
+    for coluna, item in zip(status_cols, status_items):
+        with coluna:
+            if isinstance(item[1], int):
+                metric_card(item[0], str(item[1]), item[2])
+            else:
+                metric_card(item[0], item[1], item[2])
+    st.caption("Depois dos uploads, use a página Fluxo de caixa para conferir o realizado e o projetado. Credenciais e senhas não devem ser enviadas por esta tela; elas permanecem protegidas nos Secrets do ambiente.")
+
+    with st.expander("Modelos para baixar antes de preencher", expanded=False):
+        st.write("Baixe o modelo correspondente, preencha somente com dados reais e envie na aba correta.")
+        modelo_contratos = (ROOT / "templates" / "contas_a_receber.csv").read_bytes()
+        modelo_agendamentos = (ROOT / "templates" / "agendamentos.csv").read_bytes()
+        download_cols = st.columns(2)
+        with download_cols[0]:
+            st.download_button("Baixar modelo de contratos", modelo_contratos, "contas_a_receber.csv", "text/csv", use_container_width=True)
+        with download_cols[1]:
+            st.download_button("Baixar modelo de agendamentos", modelo_agendamentos, "agendamentos.csv", "text/csv", use_container_width=True)
+
+    contratos_tab, extratos_tab, agendamentos_tab = st.tabs(["1. Contratos", "2. Extratos bancários", "3. Agendamentos"])
 
     with contratos_tab:
         st.markdown("#### Importar contratos e parcelas")
