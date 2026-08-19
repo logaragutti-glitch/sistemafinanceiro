@@ -7,8 +7,10 @@ informação por decisão, não por ordem de execução técnica.
 from __future__ import annotations
 
 import calendar
+import mimetypes
 import os
 import sys
+import tempfile
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -30,8 +32,11 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.cashflow import consolidar, totais
+from src import drive_uploads
+from src.upload_utils import validar_agendamentos_csv, validar_upload_extrato
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+DRIVE_SCOPES = ["https://www.googleapis.com/auth/drive"]
 COR_CASA = "#1769AA"
 COR_CASARAO = "#C97916"
 COR_VERDE = "#16845B"
@@ -42,7 +47,7 @@ COR_MUTED = "#61707D"
 COR_BORDA = "#DCE3E8"
 
 EMPRESAS = ["Casa da Árvore", "Casarão Festas"]
-PAGINAS = ["Resumo", "Agendamentos", "Fluxo de caixa", "Recebimentos", "Despesas", "Contratos", "DRE", "Comissões", "Operação"]
+PAGINAS = ["Resumo", "Importações", "Agendamentos", "Fluxo de caixa", "Recebimentos", "Despesas", "Contratos", "DRE", "Comissões", "Operação"]
 ABAS = {
     "Contas a receber": "Contas_a_Receber",
     "Custos fixos": "Custos_Fixos",
@@ -178,6 +183,24 @@ def _cliente():
     return gspread.authorize(creds).open_by_key(spreadsheet_id)
 
 
+@st.cache_resource
+def _drive():
+    if _tem_secrets():
+        creds = Credentials.from_service_account_info(
+            dict(st.secrets["gcp_service_account"]), scopes=DRIVE_SCOPES
+        )
+        folder_id = str(st.secrets.get("DRIVE_UPLOADS_FOLDER_ID", "")) or None
+    else:
+        from dotenv import load_dotenv
+        load_dotenv(ROOT / ".env")
+        caminho = os.getenv("GOOGLE_CREDENTIALS_FILE", "credentials.json")
+        if not os.path.isabs(caminho):
+            caminho = str(ROOT / caminho)
+        creds = Credentials.from_service_account_file(caminho, scopes=DRIVE_SCOPES)
+        folder_id = os.getenv("DRIVE_UPLOADS_FOLDER_ID") or None
+    return drive_uploads.service(creds), folder_id
+
+
 @st.cache_data(ttl=300)
 def ler(aba: str) -> pd.DataFrame:
     try:
@@ -190,16 +213,22 @@ def ler(aba: str) -> pd.DataFrame:
     return pd.DataFrame(registros)
 
 
+def _gravar_linhas(aba: str, registros: list[dict]) -> int:
+    if not registros:
+        return 0
+    worksheet = _cliente().worksheet(aba)
+    headers = worksheet.row_values(1)
+    if not headers:
+        raise ValueError(f"A aba {aba} não possui headers")
+    linhas = [[registro.get(header, "") for header in headers] for registro in registros]
+    worksheet.append_rows(linhas, value_input_option="USER_ENTERED")
+    ler.clear()
+    return len(linhas)
+
+
 def gravar_agendamento(dados: dict) -> None:
     """Grava um agendamento na planilha; nunca lança direto em realizado."""
-    _cliente().worksheet(ABAS["Agendamentos"]).append_row(
-        [dados.get(coluna, "") for coluna in (
-            "ID Agendamento", "Tipo", "Empresa", "Venue", "Descrição", "Categoria",
-            "Favorecido", "Valor", "Data Prevista", "Recorrência", "Status",
-            "Data Baixa", "ID Transação Banco", "Observações")],
-        value_input_option="USER_ENTERED",
-    )
-    ler.clear()
+    _gravar_linhas(ABAS["Agendamentos"], [dados])
 
 
 def numero(valor: object, default: float = 0.0) -> float:
@@ -558,6 +587,89 @@ def pagina_resumo(frames: dict[str, pd.DataFrame], periodo: str, empresa: str, v
                 st.markdown(f'<div class="attention-card{classe}"><div class="attention-title">{titulo}</div><div class="attention-text">{texto}</div></div>', unsafe_allow_html=True)
 
 
+def _ler_contratos_upload(conteudo: bytes) -> list[dict]:
+    from scripts.importar_contas_receber import ler_csv
+    with tempfile.NamedTemporaryFile(suffix=".csv") as temporario:
+        temporario.write(conteudo)
+        temporario.flush()
+        return ler_csv(temporario.name)
+
+
+def pagina_importacoes(frames: dict[str, pd.DataFrame], periodo: str, empresa: str, venue: str) -> None:
+    render_header(periodo, empresa, "Importações")
+    st.markdown('<div class="eyebrow">Entrada controlada de dados</div><div class="page-subtitle">Envie arquivos, confira a prévia e confirme antes de qualquer gravação.</div>', unsafe_allow_html=True)
+    st.info("O sistema não grava nada automaticamente ao selecionar um arquivo. A gravação só ocorre depois da validação e do botão de confirmação.")
+
+    contratos_tab, agendamentos_tab, extratos_tab = st.tabs(["Contratos", "Agendamentos", "Extratos bancários"])
+
+    with contratos_tab:
+        st.markdown("#### Importar contratos e parcelas")
+        st.caption("Use um CSV baseado no modelo de Contas_a_Receber. O sistema rejeita campos inválidos e ignora ID Contrato + Parcela já existentes.")
+        arquivo = st.file_uploader("Selecione o CSV de contratos", type=["csv"], key="upload_contratos")
+        if arquivo is not None:
+            try:
+                linhas = _ler_contratos_upload(arquivo.getvalue())
+                existentes = {(str(l.get("ID Contrato")), str(l.get("Parcela"))) for l in frames["Contas a receber"].to_dict("records")}
+                novas = [l for l in linhas if (l["ID Contrato"], l["Parcela"]) not in existentes]
+                st.success(f"{len(linhas)} linha(s) válida(s); {len(novas)} nova(s) e {len(linhas) - len(novas)} já existente(s).")
+                st.dataframe(pd.DataFrame(linhas).head(20), use_container_width=True, hide_index=True)
+                confirmar = st.checkbox("Confirmo que este arquivo contém contratos reais e revisados.", key="confirmar_contratos")
+                if st.button("Importar contratos novos", type="primary", disabled=not novas or not confirmar, key="btn_importar_contratos"):
+                    quantidade = _gravar_linhas(ABAS["Contas a receber"], novas)
+                    st.success(f"{quantidade} contrato(s)/parcela(s) importado(s) com sucesso.")
+                    st.rerun()
+            except Exception as exc:  # noqa: BLE001 — erro de arquivo deve ser exibido sem stack trace
+                st.error(f"Arquivo rejeitado: {exc}")
+
+    with agendamentos_tab:
+        st.markdown("#### Importar agendamentos em lote")
+        st.caption("O CSV deve conter Tipo, Empresa, Descrição, Valor e Data Prevista. Os registros entram no caixa projetado, não no realizado.")
+        arquivo = st.file_uploader("Selecione o CSV de agendamentos", type=["csv"], key="upload_agendamentos")
+        if arquivo is not None:
+            try:
+                linhas = validar_agendamentos_csv(arquivo.getvalue())
+                existentes = {str(l.get("ID Agendamento")) for l in frames["Agendamentos"].to_dict("records")}
+                novas = [l for l in linhas if l["ID Agendamento"] not in existentes]
+                st.success(f"{len(linhas)} linha(s) válida(s); {len(novas)} nova(s) e {len(linhas) - len(novas)} já existente(s).")
+                st.dataframe(pd.DataFrame(linhas).head(20), use_container_width=True, hide_index=True)
+                confirmar = st.checkbox("Confirmo que os agendamentos são compromissos reais e revisados.", key="confirmar_agendamentos")
+                if st.button("Importar agendamentos novos", type="primary", disabled=not novas or not confirmar, key="btn_importar_agendamentos"):
+                    quantidade = _gravar_linhas(ABAS["Agendamentos"], novas)
+                    st.success(f"{quantidade} agendamento(s) importado(s) com sucesso.")
+                    st.rerun()
+            except Exception as exc:  # noqa: BLE001
+                st.error(f"Arquivo rejeitado: {exc}")
+
+    with extratos_tab:
+        st.markdown("#### Enviar extratos bancários")
+        st.caption("Envie um arquivo por conta. O nome precisa ser exatamente CONTA.ofx ou CONTA.xlsx, por exemplo AZEVEDO_ITAU.xlsx.")
+        arquivos = st.file_uploader("Selecione os extratos", type=["ofx", "xlsx"], accept_multiple_files=True, key="upload_extratos")
+        aprovados = []
+        if arquivos:
+            for arquivo in arquivos:
+                try:
+                    conta, extensao = validar_upload_extrato(arquivo.name, arquivo.size)
+                    aprovados.append({"Arquivo": arquivo.name, "Conta": conta, "Formato": extensao, "Tamanho": f"{arquivo.size / 1024:.1f} KB", "_arquivo": arquivo})
+                except ValueError as exc:
+                    st.error(f"{arquivo.name}: {exc}")
+            if aprovados:
+                st.dataframe(pd.DataFrame([{k: v for k, v in item.items() if k != "_arquivo"} for item in aprovados]), use_container_width=True, hide_index=True)
+                confirmar = st.checkbox("Confirmo que os arquivos são extratos oficiais exportados do banco.", key="confirmar_extratos")
+                if st.button("Enviar extratos para processamento", type="primary", disabled=not confirmar, key="btn_importar_extratos"):
+                    try:
+                        drive, folder_id = _drive()
+                        resultados = []
+                        for item in aprovados:
+                            arquivo = item["_arquivo"]
+                            mime = mimetypes.guess_type(arquivo.name)[0] or "application/octet-stream"
+                            salvo = drive_uploads.upload_bytes(drive, arquivo.name, arquivo.getvalue(), mime, folder_id)
+                            resultados.append(salvo.get("name", arquivo.name))
+                        st.success(f"{len(resultados)} extrato(s) salvo(s) no armazenamento persistente. O próximo Cenário 1 fará a sincronização.")
+                        st.write("Arquivos enviados:", ", ".join(resultados))
+                    except Exception as exc:  # noqa: BLE001
+                        st.error(f"Não foi possível persistir os extratos: {type(exc).__name__}")
+
+
 def pagina_agendamentos(frames: dict[str, pd.DataFrame], periodo: str, empresa: str, venue: str) -> None:
     render_header(periodo, empresa, "Agendamentos")
     st.markdown('<div class="eyebrow">Planejamento financeiro</div><div class="page-subtitle">Registre receitas e despesas futuras. Elas entram no fluxo projetado, mas não alteram o realizado.</div>', unsafe_allow_html=True)
@@ -783,6 +895,8 @@ pagina, periodo, empresa, venue = render_sidebar(frames)
 
 if pagina == "Resumo":
     pagina_resumo(frames, periodo, empresa, venue)
+elif pagina == "Importações":
+    pagina_importacoes(frames, periodo, empresa, venue)
 elif pagina == "Agendamentos":
     pagina_agendamentos(frames, periodo, empresa, venue)
 elif pagina == "Fluxo de caixa":

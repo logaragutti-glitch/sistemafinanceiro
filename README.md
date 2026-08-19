@@ -150,7 +150,7 @@ python -m scripts.run_once --cenario 1
 
 ## Agendamentos e fluxo de caixa projetado
 
-O painel agora possui as páginas **Agendamentos** e **Fluxo de caixa**. Em `Agendamentos`, o gestor pode cadastrar receitas e despesas futuras com data, recorrência e status. Esses registros alimentam o caixa projetado, mas não alteram o realizado, a DRE, as comissões ou as baixas bancárias. O detalhe completo está em [`AGENDAMENTOS_GUIA.md`](AGENDAMENTOS_GUIA.md).
+O painel agora possui as páginas **Importações**, **Agendamentos** e **Fluxo de caixa**. Em `Importações`, o usuário pode enviar contratos CSV, agendamentos CSV e extratos OFX/XLSX. O sistema mostra uma prévia, valida o arquivo e só grava depois da confirmação. Contratos e agendamentos vão para a planilha; extratos são persistidos no Google Drive e sincronizados para a pasta local antes do Cenário 1. Em `Agendamentos`, o gestor também pode cadastrar receitas e despesas futuras com data, recorrência e status. Esses registros alimentam o caixa projetado, mas não alteram o realizado, a DRE, as comissões ou as baixas bancárias. O detalhe completo está em [`AGENDAMENTOS_GUIA.md`](AGENDAMENTOS_GUIA.md).
 
 O saldo projetado é calculado como entradas realizadas + entradas previstas - saídas realizadas - saídas previstas. Parcelas `Pago` e agendamentos `Concluído`, `Baixado` ou `Cancelado` não entram novamente na previsão.
 

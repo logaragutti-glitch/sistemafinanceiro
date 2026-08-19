@@ -1,6 +1,7 @@
 requests>=2.31
 gspread>=6.0
 google-auth>=2.28
+google-api-python-client>=2.150
 anthropic>=0.40
 python-dotenv>=1.0
 schedule>=1.2

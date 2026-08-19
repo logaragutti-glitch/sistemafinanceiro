@@ -13,6 +13,21 @@ from src.logging_config import get_logger
 logger = get_logger("main")
 
 
+def sincronizar_extratos():
+    try:
+        from scripts.sync_extratos_drive import main as sync_main
+        sync_main()
+    except FileNotFoundError:
+        logger.info("Sincronização Drive ignorada: credenciais de Drive ausentes; usando extratos locais")
+    except Exception as exc:  # noqa: BLE001 — upload não deve bloquear arquivos locais
+        logger.warning("Não foi possível sincronizar uploads do Drive: %s", exc)
+
+
+def executar_cenario_1():
+    sincronizar_extratos()
+    scenario_1_ingest.run()
+
+
 def seguro(fn, nome):
     def wrapper():
         try:
@@ -27,7 +42,7 @@ def seguro(fn, nome):
     return wrapper
 
 
-schedule.every().day.at("06:00").do(seguro(scenario_1_ingest.run, "Cenário 1"))
+schedule.every().day.at("06:00").do(seguro(executar_cenario_1, "Cenário 1"))
 schedule.every().day.at("08:00").do(seguro(scenario_2_alerts.run, "Cenário 2"))
 schedule.every().day.at("08:15").do(seguro(scenario_7_budget.run, "Cenário 7"))
 schedule.every().day.at("08:30").do(seguro(scenario_5_analysis.run, "Cenário 5"))

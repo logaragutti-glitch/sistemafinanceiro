@@ -31,5 +31,8 @@ jobs:
       - name: Rodar testes de fluxo de caixa
         run: python tests/test_cashflow.py
 
+      - name: Rodar testes de upload
+        run: python tests/test_upload_utils.py
+
       - name: Rodar dry-run financeiro
         run: python tests/test_dry_run.py

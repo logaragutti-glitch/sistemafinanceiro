@@ -52,3 +52,11 @@ A página **Resumo** também apresenta o bloco Planejamento do caixa. A DRE cont
 | `Observações` | Condições, centro de custo ou referência. |
 
 A atualização do status para `Concluído` ou `Baixado` deve ocorrer somente depois que o movimento tiver sido efetivamente realizado e conciliado. Isso evita que o caixa projetado seja confundido com o caixa realizado.
+
+## Área de Importações
+
+Para cargas em lote, abra **Importações** no painel. A aba **Contratos** aceita CSV baseado em `templates/contas_a_receber.csv`; a aba **Agendamentos** aceita CSV baseado em `templates/agendamentos.csv`; e a aba **Extratos bancários** aceita OFX ou XLSX.
+
+A área mostra uma prévia e bloqueia a gravação até que o usuário marque a confirmação correspondente. Contratos duplicados por `ID Contrato` + `Parcela` e agendamentos duplicados por `ID Agendamento` são ignorados. Extratos precisam usar o nome exato da conta, como `AZEVEDO_ITAU.xlsx`, `PARKLAGOS_CAIXA.ofx` ou `PORDOSOL_CAIXA.xlsx`.
+
+Contratos e agendamentos são escritos na planilha após a confirmação. Extratos são armazenados na pasta persistente `Financeiro Uploads` do Google Drive da conta de serviço. O agendador executa `scripts/sync_extratos_drive.py` antes do Cenário 1 para baixar os arquivos válidos para `extratos/`.
