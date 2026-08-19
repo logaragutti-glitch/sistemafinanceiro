@@ -9,3 +9,9 @@ A página Resumo carregou com a nova navegação lateral, filtros de período/em
 A navegação para Contratos abriu os quatro KPIs de parcelas e o empty state correto. A página Operação abriu os indicadores de 11 abas monitoradas, 0 falhas e 0 parcelas, além da tabela de volume por aba. Os estados exibidos são coerentes com a planilha real vazia.
 
 Após o ajuste, a página Operação passou a exibir “Operação” como título principal, e o Resumo manteve “Visão geral financeira”. A composição visual ficou consistente entre páginas, sem duplicação de títulos, com os filtros e cards preservados.
+
+## Produção
+
+O Streamlit Cloud aceitou o redeploy do commit do redesign e passou a exibir o título `Painel Financeiro | Casa da Árvore + Casarão`. A interface estava em carregamento no momento da captura, sem mensagem de erro; o próximo refresh deve mostrar a nova navegação e os cards já validados localmente.
+
+A produção terminou de carregar com sucesso: a nova navegação lateral, filtros, cartões executivos, comparação entre empresas e empty states estão visíveis. As metas reais também apareceram no painel — R$ 200.000 para Casa da Árvore e R$ 100.000 para Casarão — confirmando que o redesign está conectado à planilha real.
