@@ -9,3 +9,5 @@ Após recarregar, o menu exibiu `Agendamentos` e `Fluxo de caixa`. O Resumo most
 A tela Fluxo de caixa abriu corretamente com quatro cartões — Entradas realizadas, Entradas previstas, Saídas previstas e Saldo projetado — e explicou que o previsto não altera DRE, comissões ou baixas bancárias. Com a aba vazia, exibiu o empty state esperado e nenhum gráfico foi criado artificialmente.
 
 A planilha real foi verificada via Google Sheets: `Agendamentos!A1:N1` contém os 14 headers oficiais e nenhuma linha de lançamento. A suíte final passou, incluindo `tests/test_cashflow.py`, `tests/test_dry_run.py`, compilação do painel e `git diff --check`.
+
+Em produção, após o redeploy do commit 28433c6, o painel carregou com sucesso. O menu mostra `Agendamentos` e `Fluxo de caixa`, o Resumo mostra o bloco Planejamento do caixa e as metas reais de R$ 200.000 e R$ 100.000 permanecem carregadas. A aba Agendamentos está vazia e o painel não cria dados fictícios.
