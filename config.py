@@ -102,3 +102,5 @@ ABA_REAL_ORCADO = "RealVsOrcado"
 # hardcoded em scenario_7_budget.py; mudar a meta agora é editar a planilha,
 # não o código.
 ABA_METAS = "Metas_Mensais"
+# Agendamentos não alteram o realizado: alimentam somente o fluxo de caixa projetado.
+ABA_AGENDAMENTOS = "Agendamentos"

@@ -16,7 +16,8 @@ sistema-financeiro/
 │   └── criar_planilha.py # cria/completa as abas da planilha Google Sheets
 └── src/
     ├── aggregator.py     # extratos OFX (grátis) ou Pluggy/Belvo (Open Finance pago)
-    ├── sheets.py         # cliente Google Sheets (11 abas)
+    ├── sheets.py         # cliente Google Sheets (12 abas)
+    ├── cashflow.py       # realizado + previsto, recorrências e saldo projetado
     ├── whatsapp.py       # WhatsApp Business Cloud API
     ├── email_sender.py   # e-mail via SMTP (Gmail/Outlook, senha de app)
     ├── notificar.py      # manda por WhatsApp E e-mail ao mesmo tempo
@@ -107,10 +108,10 @@ ou em outro formato — mas não conte com isso.
    depois valide: `python -m src.aggregator --test`
 4. Compartilhe uma planilha (nova ou existente) com o e-mail da service
    account (`client_email` do `credentials.json`), permissão Editor. Depois
-   rode `python -m scripts.criar_planilha` — cria (ou completa) todas as 11
-   abas com os headers exatos que os cenários esperam, incluindo
-   `Metas_Mensais` (é de lá que o Cenário 7 lê a meta de cada empresa; antes
-   ficava hardcoded no código). Se criar uma planilha nova, o script imprime
+   rode `python -m scripts.criar_planilha` — cria (ou completa) todas as 12
+   abas com os headers exatos que os cenários esperam, incluindo `Metas_Mensais`
+   e `Agendamentos`. O Cenário 7 lê a meta de cada empresa da planilha; antes
+   ela ficava hardcoded no código. Se criar uma planilha nova, o script imprime
    o `SPREADSHEET_ID` pra você colar no `.env`.
    Metas já definidas pelo gestor: `Casa da Árvore | 200000` e
    `Casarão Festas | 100000` — insira essas duas linhas na aba `Metas_Mensais`
@@ -147,14 +148,18 @@ Para testar um cenário individual sem aguardar o horário agendado, use:
 python -m scripts.run_once --cenario 1
 ```
 
+## Agendamentos e fluxo de caixa projetado
+
+O painel agora possui as páginas **Agendamentos** e **Fluxo de caixa**. Em `Agendamentos`, o gestor pode cadastrar receitas e despesas futuras com data, recorrência e status. Esses registros alimentam o caixa projetado, mas não alteram o realizado, a DRE, as comissões ou as baixas bancárias. O detalhe completo está em [`AGENDAMENTOS_GUIA.md`](AGENDAMENTOS_GUIA.md).
+
+O saldo projetado é calculado como entradas realizadas + entradas previstas - saídas realizadas - saídas previstas. Parcelas `Pago` e agendamentos `Concluído`, `Baixado` ou `Cancelado` não entram novamente na previsão.
+
 ## Deploy sugerido
 - VPS barata (R$20-30/mês) ou Raspberry Pi na empresa. O arquivo `deploy/systemd/sistema-financeiro.service` e seu README contêm a instalação reproduzível.
 - Alternativa serverless: GitHub Actions com cron (grátis) — um workflow por cenário, desde que a rotina de extratos seja resolvida e os segredos sejam configurados com segurança.
 
-## Painel web (leitura, grátis)
-`painel/app.py` é um painel Streamlit (só leitura, não edita nada) que lê
-direto da mesma planilha Google Sheets: receita/despesas do mês por empresa,
-DRE, Real vs Orçado, comissões da semana, contratos em atraso.
+## Painel web
+`painel/app.py` é um painel Streamlit que lê diretamente da mesma planilha Google Sheets e permite cadastrar agendamentos futuros. Ele também exibe receita/despesas do mês por empresa, DRE, Real vs Orçado, comissões da semana, contratos em atraso e o fluxo de caixa projetado. As demais rotinas financeiras continuam sendo processadas pelos cenários automáticos; o painel não baixa transações bancárias nem altera o realizado.
 
 Rodar localmente:
 ```

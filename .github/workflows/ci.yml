@@ -28,5 +28,8 @@ jobs:
       - name: Validar template de contratos
         run: python -m scripts.importar_contas_receber --csv templates/contas_a_receber.csv --dry-run
 
+      - name: Rodar testes de fluxo de caixa
+        run: python tests/test_cashflow.py
+
       - name: Rodar dry-run financeiro
         run: python tests/test_dry_run.py

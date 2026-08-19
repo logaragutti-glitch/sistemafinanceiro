@@ -6,7 +6,9 @@ informação por decisão, não por ordem de execução técnica.
 """
 from __future__ import annotations
 
+import calendar
 import os
+import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -24,6 +26,11 @@ st.set_page_config(
 )
 
 ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.cashflow import consolidar, totais
+
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 COR_CASA = "#1769AA"
 COR_CASARAO = "#C97916"
@@ -35,7 +42,7 @@ COR_MUTED = "#61707D"
 COR_BORDA = "#DCE3E8"
 
 EMPRESAS = ["Casa da Árvore", "Casarão Festas"]
-PAGINAS = ["Resumo", "Recebimentos", "Despesas", "Contratos", "DRE", "Comissões", "Operação"]
+PAGINAS = ["Resumo", "Agendamentos", "Fluxo de caixa", "Recebimentos", "Despesas", "Contratos", "DRE", "Comissões", "Operação"]
 ABAS = {
     "Contas a receber": "Contas_a_Receber",
     "Custos fixos": "Custos_Fixos",
@@ -48,6 +55,7 @@ ABAS = {
     "Recebimentos Casarão": "Recebimentos_Casarao",
     "Despesas Casarão": "Despesas_Casarao",
     "Comissões Casarão": "Comissoes_Casarao",
+    "Agendamentos": "Agendamentos",
 }
 
 CSS = f"""
@@ -180,6 +188,18 @@ def ler(aba: str) -> pd.DataFrame:
         FALHAS_LEITURA[aba] = type(exc).__name__
         return pd.DataFrame()
     return pd.DataFrame(registros)
+
+
+def gravar_agendamento(dados: dict) -> None:
+    """Grava um agendamento na planilha; nunca lança direto em realizado."""
+    _cliente().worksheet(ABAS["Agendamentos"]).append_row(
+        [dados.get(coluna, "") for coluna in (
+            "ID Agendamento", "Tipo", "Empresa", "Venue", "Descrição", "Categoria",
+            "Favorecido", "Valor", "Data Prevista", "Recorrência", "Status",
+            "Data Baixa", "ID Transação Banco", "Observações")],
+        value_input_option="USER_ENTERED",
+    )
+    ler.clear()
 
 
 def numero(valor: object, default: float = 0.0) -> float:
@@ -369,7 +389,7 @@ def render_sidebar(frames: dict[str, pd.DataFrame]) -> tuple[str, str, str, str]
         if FALHAS_LEITURA:
             st.markdown('<div class="side-note">Algumas abas não puderam ser lidas. O painel continua disponível, mas os indicadores afetados podem aparecer vazios.</div>', unsafe_allow_html=True)
         else:
-            st.markdown('<div class="side-note">Dados somente leitura. Os lançamentos são feitos na planilha e processados pelos cenários automáticos.</div>', unsafe_allow_html=True)
+            st.markdown('<div class="side-note">O realizado é somente leitura e vem dos cenários automáticos. A página Agendamentos permite registrar compromissos futuros para o fluxo projetado.</div>', unsafe_allow_html=True)
     return pagina, periodo, empresa, venue
 
 
@@ -391,6 +411,23 @@ def dados_filtrados(frames: dict[str, pd.DataFrame], periodo: str, empresa: str,
             filtrado = filtrar_periodo(filtrado, "Data", periodo)
         resultado[chave] = filtrar_venue(filtrado, venue)
     return resultado
+
+
+def linhas_fluxo(frames: dict[str, pd.DataFrame], periodo: str, empresa: str, venue: str) -> list[dict]:
+    """Consolida realizado e previsto para o mês selecionado."""
+    filtrados = dados_filtrados(frames, periodo, empresa, venue)
+    recebimentos, despesas = recebimentos_despesas(filtrados)
+    inicio = date.fromisoformat(f"{periodo}-01")
+    ultimo_dia = calendar.monthrange(inicio.year, inicio.month)[1]
+    fim = date(inicio.year, inicio.month, ultimo_dia)
+    return consolidar(
+        recebimentos.to_dict("records"),
+        despesas.to_dict("records"),
+        filtrados["Contas a receber"].to_dict("records"),
+        filtrados["Agendamentos"].to_dict("records"),
+        inicio,
+        fim,
+    )
 
 
 def recebimentos_despesas(frames: dict[str, pd.DataFrame]) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -463,6 +500,13 @@ def pagina_resumo(frames: dict[str, pd.DataFrame], periodo: str, empresa: str, v
     with kpis[3]: metric_card("Em atraso", moeda(atraso), "Parcelas vencidas")
     with kpis[4]: metric_card("Meta atingida", percentual(atingimento), f"Meta: {moeda(meta) if meta else 'não configurada'}")
 
+    caixa = totais(linhas_fluxo(frames, periodo, empresa, venue))
+    st.markdown('<div class="section-heading"><h2>Planejamento do caixa</h2><span class="section-caption">Realizado + lançamentos futuros</span></div>', unsafe_allow_html=True)
+    caixa_cols = st.columns(3)
+    with caixa_cols[0]: metric_card("Entradas previstas", moeda(caixa["entradas_previstas"]), "Parcelas abertas ou atrasadas")
+    with caixa_cols[1]: metric_card("Saídas agendadas", moeda(caixa["saidas_previstas"]), "Despesas futuras")
+    with caixa_cols[2]: metric_card("Saldo projetado", moeda(caixa["liquido_projetado"]), "Não altera o realizado")
+
     st.markdown('<div class="section-heading"><h2>Comparação entre empresas</h2><span class="section-caption">Mesmo período e filtros selecionados</span></div>', unsafe_allow_html=True)
     colunas = st.columns(2)
     for col, nome in zip(colunas, EMPRESAS):
@@ -512,6 +556,120 @@ def pagina_resumo(frames: dict[str, pd.DataFrame], periodo: str, empresa: str, v
             for titulo, texto, perigo in alertas[:5]:
                 classe = " danger" if perigo else ""
                 st.markdown(f'<div class="attention-card{classe}"><div class="attention-title">{titulo}</div><div class="attention-text">{texto}</div></div>', unsafe_allow_html=True)
+
+
+def pagina_agendamentos(frames: dict[str, pd.DataFrame], periodo: str, empresa: str, venue: str) -> None:
+    render_header(periodo, empresa, "Agendamentos")
+    st.markdown('<div class="eyebrow">Planejamento financeiro</div><div class="page-subtitle">Registre receitas e despesas futuras. Elas entram no fluxo projetado, mas não alteram o realizado.</div>', unsafe_allow_html=True)
+
+    with st.form("novo_agendamento", clear_on_submit=True):
+        st.markdown("#### Novo lançamento futuro")
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            tipo = st.selectbox("Tipo", ["DESPESA", "RECEITA"])
+            empresa_nova = st.selectbox("Empresa", EMPRESAS)
+            descricao = st.text_input("Descrição", placeholder="Ex.: aluguel, patrocínio ou fornecedor")
+            categoria = st.text_input("Categoria", placeholder="Ex.: aluguel, marketing, evento")
+        with c2:
+            favorecido = st.text_input("Favorecido / origem", placeholder="Nome do fornecedor ou cliente")
+            valor = st.number_input("Valor", min_value=0.0, step=100.0, format="%.2f")
+            data_prevista = st.date_input("Data prevista", value=date.today())
+            recorrencia = st.selectbox("Recorrência", ["Única", "Mensal", "Semanal", "Anual"])
+        with c3:
+            venue_novo = st.text_input("Venue / unidade", placeholder="Opcional")
+            status_novo = st.selectbox("Status", ["Agendado", "Pendente"])
+            observacoes = st.text_area("Observações", placeholder="Condição, centro de custo ou referência")
+        salvar = st.form_submit_button("Salvar agendamento", type="primary", use_container_width=True)
+
+    if salvar:
+        if not descricao.strip() or valor <= 0:
+            st.error("Informe uma descrição e um valor maior que zero para salvar o agendamento.")
+        else:
+            identificador = f"AG-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            try:
+                gravar_agendamento({
+                    "ID Agendamento": identificador,
+                    "Tipo": tipo,
+                    "Empresa": empresa_nova,
+                    "Venue": venue_novo,
+                    "Descrição": descricao.strip(),
+                    "Categoria": categoria.strip() or "Outros",
+                    "Favorecido": favorecido.strip(),
+                    "Valor": round(valor, 2),
+                    "Data Prevista": data_prevista.isoformat(),
+                    "Recorrência": recorrencia,
+                    "Status": status_novo,
+                    "Data Baixa": "",
+                    "ID Transação Banco": "",
+                    "Observações": observacoes.strip(),
+                })
+                st.success(f"Agendamento {identificador} salvo. Ele já aparece no fluxo projetado.")
+                st.rerun()
+            except Exception as exc:  # noqa: BLE001 — feedback seguro no painel
+                st.error(f"Não foi possível salvar o agendamento: {type(exc).__name__}")
+
+    agendamentos = dados_filtrados(frames, periodo, empresa, venue)["Agendamentos"].copy()
+    if agendamentos.empty:
+        empty_state("Nenhum agendamento cadastrado", "Use o formulário acima para começar a projetar entradas e saídas.")
+        return
+    st.markdown('<div class="section-heading"><h2>Agendamentos cadastrados</h2><span class="section-caption">Filtros aplicados ao período selecionado</span></div>', unsafe_allow_html=True)
+    exibicao = agendamentos.copy()
+    if "Valor" in exibicao.columns:
+        exibicao["Valor"] = exibicao["Valor"].apply(moeda)
+    st.dataframe(exibicao, use_container_width=True, hide_index=True)
+
+
+def pagina_fluxo(frames: dict[str, pd.DataFrame], periodo: str, empresa: str, venue: str) -> None:
+    render_header(periodo, empresa, "Fluxo de caixa")
+    st.markdown('<div class="eyebrow">Planejamento financeiro</div><div class="page-subtitle">Consolidação do realizado com recebimentos e despesas agendadas.</div>', unsafe_allow_html=True)
+    linhas = linhas_fluxo(frames, periodo, empresa, venue)
+    resumo = totais(linhas)
+    k = st.columns(4)
+    with k[0]: metric_card("Entradas realizadas", moeda(resumo["entradas_realizadas"]), "Já recebidas")
+    with k[1]: metric_card("Entradas previstas", moeda(resumo["entradas_previstas"]), "Parcelas em aberto")
+    with k[2]: metric_card("Saídas previstas", moeda(resumo["saidas_previstas"]), "Despesas agendadas")
+    with k[3]: metric_card("Saldo projetado", moeda(resumo["liquido_projetado"]), "Realizado + previsto")
+
+    st.markdown('<div class="section-heading"><h2>Realizado x previsto</h2><span class="section-caption">O previsto não altera DRE, comissões ou baixas bancárias</span></div>', unsafe_allow_html=True)
+    if not linhas:
+        empty_state("Nenhum lançamento no período", "Cadastre contratos e despesas na aba Agendamentos para enxergar o fluxo futuro.")
+        return
+
+    fluxo = pd.DataFrame(linhas)
+    fluxo["Valor_num"] = fluxo["Valor"].apply(numero)
+    pivot = fluxo.pivot_table(index="Data", columns="Tipo", values="Valor_num", aggfunc="sum", fill_value=0).reset_index()
+    tipos = ["ENTRADA_REALIZADA", "ENTRADA_PREVISTA", "SAIDA_REALIZADA", "SAIDA_PREVISTA"]
+    for tipo in tipos:
+        if tipo not in pivot.columns:
+            pivot[tipo] = 0.0
+    pivot["Fluxo líquido projetado"] = pivot["ENTRADA_REALIZADA"] + pivot["ENTRADA_PREVISTA"] - pivot["SAIDA_REALIZADA"] - pivot["SAIDA_PREVISTA"]
+
+    fig = go.Figure()
+    for tipo, nome, cor in (
+        ("ENTRADA_REALIZADA", "Entrada realizada", COR_CASA),
+        ("ENTRADA_PREVISTA", "Entrada prevista", "#75A9CC"),
+        ("SAIDA_REALIZADA", "Saída realizada", COR_CASARAO),
+        ("SAIDA_PREVISTA", "Saída prevista", "#E7B97B"),
+    ):
+        fig.add_trace(go.Bar(x=pivot["Data"], y=pivot[tipo], name=nome, marker_color=cor))
+    fig.add_trace(go.Scatter(x=pivot["Data"], y=pivot["Fluxo líquido projetado"].cumsum(), name="Saldo acumulado", mode="lines+markers", line=dict(color=COR_VERDE, width=3), yaxis="y2"))
+    fig.update_layout(barmode="relative", yaxis=dict(tickprefix="R$ ", separatethousands=True), yaxis2=dict(overlaying="y", side="right", tickprefix="R$ ", separatethousands=True, showgrid=False))
+    st.plotly_chart(chart_layout(fig, 360), use_container_width=True, config={"displayModeBar": False})
+
+    view = pivot[["Data", "ENTRADA_REALIZADA", "ENTRADA_PREVISTA", "SAIDA_REALIZADA", "SAIDA_PREVISTA", "Fluxo líquido projetado"]].rename(columns={
+        "ENTRADA_REALIZADA": "Entradas realizadas", "ENTRADA_PREVISTA": "Entradas previstas",
+        "SAIDA_REALIZADA": "Saídas realizadas", "SAIDA_PREVISTA": "Saídas previstas",
+    })
+    for coluna in view.columns[1:]:
+        view[coluna] = view[coluna].apply(moeda)
+    st.dataframe(view, use_container_width=True, hide_index=True)
+
+    previstos = fluxo[fluxo["Tipo"].isin(("ENTRADA_PREVISTA", "SAIDA_PREVISTA"))].copy()
+    if not previstos.empty:
+        st.markdown('<div class="section-heading"><h2>Agendamentos no período</h2><span class="section-caption">Parcelas e despesas que ainda não foram realizadas</span></div>', unsafe_allow_html=True)
+        colunas = [coluna for coluna in ["Data", "Tipo", "Empresa", "Descrição", "Categoria", "Valor", "Status", "Origem"] if coluna in previstos.columns]
+        previstos["Valor"] = previstos["Valor"].apply(moeda)
+        st.dataframe(previstos[colunas], use_container_width=True, hide_index=True)
 
 
 def pagina_recebimentos(frames: dict[str, pd.DataFrame], periodo: str, empresa: str, venue: str) -> None:
@@ -625,6 +783,10 @@ pagina, periodo, empresa, venue = render_sidebar(frames)
 
 if pagina == "Resumo":
     pagina_resumo(frames, periodo, empresa, venue)
+elif pagina == "Agendamentos":
+    pagina_agendamentos(frames, periodo, empresa, venue)
+elif pagina == "Fluxo de caixa":
+    pagina_fluxo(frames, periodo, empresa, venue)
 elif pagina == "Recebimentos":
     pagina_recebimentos(frames, periodo, empresa, venue)
 elif pagina == "Despesas":

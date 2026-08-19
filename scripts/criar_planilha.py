@@ -34,6 +34,10 @@ ABAS = {
     config.ABA_REAL_ORCADO: [
         "Data", "Empresa", "Meta", "Pago", "A Vencer", "Projeção", "Desvio %"],
     config.ABA_METAS: ["Empresa", "Meta Mensal"],
+    config.ABA_AGENDAMENTOS: [
+        "ID Agendamento", "Tipo", "Empresa", "Venue", "Descrição", "Categoria",
+        "Favorecido", "Valor", "Data Prevista", "Recorrência", "Status",
+        "Data Baixa", "ID Transação Banco", "Observações"],
 }
 for _emp in config.EMPRESAS.values():
     ABAS[_emp["aba_receb"]] = [

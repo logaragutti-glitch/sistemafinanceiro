@@ -84,3 +84,11 @@ O serviço está configurado para o fuso `America/Sao_Paulo` e executa `main.py`
 ## 7. Primeira semana de acompanhamento
 
 Confira diariamente se os seis extratos foram baixados, se o Cenário 1 registrou transações órfãs ou ambíguas e se os e-mails chegaram ao gestor. Na primeira sexta-feira, confira DRE, relatório semanal e comissões antes de considerar a rotina estabilizada.
+
+## 2A. Configurar agendamentos e fluxo projetado
+
+A planilha deve conter a aba `Agendamentos` com os headers criados pelo sistema. No painel publicado, abra **Agendamentos** e registre somente compromissos futuros reais, escolhendo `RECEITA` ou `DESPESA`, empresa, valor, data prevista, recorrência e status `Agendado` ou `Pendente`.
+
+Depois abra **Fluxo de caixa** e confira as quatro métricas: entradas realizadas, entradas previstas, saídas previstas e saldo projetado. O cadastro não deve ser usado para simular pagamentos já feitos. Quando um compromisso for realizado e conciliado, atualize o status para `Concluído` ou `Baixado` e preencha a referência da transação, para que ele deixe de aparecer como previsto.
+
+A DRE e as comissões continuam usando somente o realizado. Não é necessário alterar os cenários 1, 3 ou 6 para cadastrar uma previsão.
